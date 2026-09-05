@@ -6,7 +6,6 @@ A full-stack web platform that uses a locally-hosted LLM to analyze resumes, mat
 
 ---
 
-
 **Submitted to:** Fahim Shakil Tamim, Lecturer, Dept. of CSE, IUBAT
 
 ---
