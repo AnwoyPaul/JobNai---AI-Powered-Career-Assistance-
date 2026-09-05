@@ -1,0 +1,156 @@
+SETTING UP JOBNAI ON A NEW DEVICE
+
+This walks through everything needed to get the project running on a fresh
+machine, based on what we actually had to fix the first time, so you can
+skip the trial and error.
+
+
+1. INSTALL PREREQUISITES
+
+- .NET 9 SDK: https://dotnet.microsoft.com/download
+  Verify with: dotnet --version (should show 9.0.x)
+
+- PostgreSQL: https://www.postgresql.org/download/
+  Remember the password you set for the postgres user
+
+- Node.js: https://nodejs.org/
+  LTS version is fine
+
+- Ollama: https://ollama.com/
+  Verify with: ollama --version
+
+- Git: https://git-scm.com/
+  For cloning the repo
+
+Check your RAM before picking a model. If the machine has 8GB or less, use
+llama3.2 (3B). Anything bigger, like llama3.1 (8B), will be painfully slow
+or fail to load. If the new device has 16GB or more, llama3.1 will give
+noticeably better output quality.
+
+Pull the model:
+ollama pull llama3.2
+
+If you use a different model name, remember to update the Model constant
+in OllamaService.cs, MatchingService.cs, CoverLetterService.cs, and
+ChatService.cs to match.
+
+
+2. CLONE THE REPOSITORY
+
+cd C:\Wherever\You\Want\It
+git clone https://github.com/Barrun-Kabir-Rifat/JobNai-An-Ai-Powered-Job-Assistant.git JobNai
+cd JobNai
+
+
+3. CREATE THE DATABASE
+
+psql -U postgres -c "CREATE DATABASE jobnai;"
+
+
+4. BACKEND SETUP
+
+Go to the API folder:
+cd backend\JobNai.Api
+
+4a. Create your local config from the template:
+copy appsettings.Development.json.example appsettings.Development.json
+notepad appsettings.Development.json
+
+Fill in:
+- ConnectionStrings:DefaultConnection: your real PostgreSQL password
+- Jwt:Key: any random string, at least 32 characters long (it does not
+  need to match your other machine's key)
+
+4b. Restore and build:
+cd ..\..
+dotnet build
+
+If this fails with a NU1100 or package resolution error, it is almost
+certainly a NuGet package-source-mapping issue (this happened during our
+initial setup). Check the config file:
+notepad %AppData%\NuGet\NuGet.Config
+
+If there is a packageSourceMapping block restricting nuget.org to a
+specific list of packages, either delete that whole block, or add a
+wildcard pattern entry as the very first item inside the nuget.org
+package source block.
+
+4c. Apply migrations:
+cd JobNai.Api
+dotnet ef database update -p ..\JobNai.Infrastructure -s .
+
+If "dotnet ef" is not recognized, install the tool:
+dotnet tool install --global dotnet-ef --version 9.0.11
+
+4d. Run it:
+dotnet run
+
+You should see: Now listening on: http://localhost:5268
+
+
+5. FRONTEND SETUP
+
+Open a new terminal window and leave the backend running in the other one.
+
+cd JobNai\frontend
+npm install
+npm run dev
+
+You should see: Local: http://localhost:5173/
+
+
+6. VERIFY EVERYTHING WORKS
+
+1. Open http://localhost:5173 in a browser.
+2. Register a new account.
+3. Log in, upload a resume, and confirm the AI extraction completes.
+   Expect this to take anywhere from 20 seconds to a few minutes
+   depending on the new machine's CPU and RAM.
+4. Browse the Jobs page. Note this will show an empty list on a fresh
+   database, since job postings are specific to each database. You will
+   need to register an Employer account and create and publish at least
+   one posting before there is anything to browse or match against.
+
+To create an Admin account, since it is not available through the public
+registration form, run this from a terminal once the backend is running:
+
+curl -X POST http://localhost:5268/api/auth/register -H "Content-Type: application/json" -d "{\"fullName\":\"Admin\",\"email\":\"admin@jobnai.com\",\"password\":\"YourPassword1!\",\"role\":\"Admin\"}"
+
+
+KNOWN PITFALLS FROM OUR FIRST SETUP
+
+- UglyToad.PdfPig has no stable release. If installing it fails with "no
+  stable versions available," you need to allow prerelease versions.
+  This should already be locked into the project file from the repo, so
+  you likely will not hit this unless re-adding the package manually.
+
+- Npgsql.EntityFrameworkCore.PostgreSQL uses its own version numbering,
+  not matched to Microsoft's EF Core versions. Already pinned correctly
+  in the project files in the repo.
+
+- Two terminals running a build and a run command in the same project
+  folder at the same time will lock each other out of files. Always stop
+  the running server before running a build or migration command in the
+  same project.
+
+- Cover letter, chat, and matching endpoints are genuinely slow on
+  CPU-only, low-RAM machines. Several minutes is normal for a small
+  model on 8GB RAM. This is not a bug; give it time before assuming
+  something is broken.
+
+
+WHAT DOES NOT TRANSFER AUTOMATICALLY
+
+Since each device has its own local PostgreSQL instance, the following
+do not carry over from your original machine. They are specific to
+whichever database you are pointed at:
+
+- User accounts, including the Admin account, which you will need to
+  recreate
+- Job postings
+- Uploaded resumes and confirmed profiles
+- Cover letters and applications
+
+If you want the same data on both devices, you would need to either
+dump and restore the PostgreSQL database, or point both devices at one
+shared remote database instead of two separate local ones.

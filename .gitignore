@@ -1,0 +1,21 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+
+# Prisma Studio scratch folder (not part of the actual app)
+prisma-studio/
+
+# Sensitive config
+backend/JobNai.Api/appsettings.Development.json
+
+# User-uploaded files (resumes) - not source code, contains personal data
+backend/JobNai.Api/wwwroot/uploads/
+
+# OS/editor junk
+.vs/
+.vscode/
+*.user
